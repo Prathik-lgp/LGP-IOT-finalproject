@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Parking Map Dashboard — PR10</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container" id="app">
+        <header>
+            <h1>Parking Map Dashboard — PR10</h1>
+            <div class="controls">
+                <button class="btn" id="refreshBtn">Refresh now</button>
+                <label class="small">Poll interval:
+                    <select id="intervalSelect" class="btn" style="padding:6px 10px">
+                        <option value="2000">2s</option>
+                        <option value="5000" selected>5s</option>
+                        <option value="10000">10s</option>
+                        <option value="30000">30s</option>
+                    </select>
+                </label>
+            </div>
+        </header>
+
+        <div class="map">
+            <div class="left-col">
+                <div class="entry-exit" style="width:100%">
+                    <div class="spot" style="width:120px">
+                        <div class="spot-label">Exit</div>
+                        <div class="spot-value">←</div>
+                    </div>
+                    <div style="flex:1"></div>
+                    <div class="spot" style="width:120px">
+                        <div class="spot-label">Entry</div>
+                        <div class="spot-value">→</div>
+                    </div>
+                </div>
+
+                <div class="map-area" aria-hidden="false">
+                    <div class="parking-grid" id="parkingGrid">
+                        <div class="lot" id="lot1" data-id="1">
+                            <div id="lot1-label">Lot 1</div>
+                            <div class="sub" id="lot1-sub">—</div>
+                        </div>
+                        <div class="lot" id="lot2" data-id="2">
+                            <div id="lot2-label">Lot 2</div>
+                            <div class="sub" id="lot2-sub">—</div>
+                        </div>
+                        <div class="lot" id="lot3" data-id="3">
+                            <div id="lot3-label">Lot 3</div>
+                            <div class="sub" id="lot3-sub">—</div>
+                        </div>
+                        <div class="lot nopark" id="nopark" data-id="X">
+                            <div id="nopark-label">No-Parking Zone</div>
+                            <div class="sub" id="nopark-sub">—</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <aside class="side-info" style="width:320px">
+                <div class="meta">
+                    <div><strong>Device UID:</strong> PR10</div>
+                    <div style="margin-top:8px"><strong>Last update:</strong> <span id="lastUpdate">Never</span></div>
+                    <div class="status-row">
+                        <div class="dot" id="dotLed" style="background:#7c7c7c"></div>
+                        <div class="small">D1 LED state</div>
+                    </div>
+                </div>
+
+                <div class="meta" id="rawDataBox">
+                    <div style="font-weight:700; margin-bottom:6px">Raw sensor snapshot</div>
+                    <pre id="rawDump"
+                        style="white-space:pre-wrap; font-size:13px; margin:0; color:var(--muted)">No data yet</pre>
+                </div>
+
+                <div class="meta small">
+                    Logic: If ultrasound > 30 and IR == 1 → <strong>Free</strong> (green). Otherwise →
+                    <strong>Occupied</strong> (red).
+                    <br><br>
+                    No-parking violation: if ultrasound < 30 OR IR==0 → zone blinks red and D1 set to 1. </div>
+            </aside>
+        </div>
+
+        <footer>
+            <div class="small">Built with tired sarcasm & functional JS.</div>
+            <div id="statusMsg" class="small">Status: idle</div>
+        </footer>
+    </div>
+    <!-- Inject env vars into JS -->
+    <script>
+        const base = "{{ IOT_BASE_URL }}";
+        const uid = "{{ DEVICE_UID }}";
+    </script>
+
+    <!-- Include your modular JS -->
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
