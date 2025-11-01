@@ -55,11 +55,13 @@ h1 {
     border: 1px solid rgba(255, 255, 255, .03);
     padding: 8px 12px;
     border-radius: 8px;
-    cursor: pointer
+    cursor: pointer;
+    transition: 0.2s ease;
 }
 
 .btn:hover {
-    filter: brightness(1.05)
+    filter: brightness(1.05);
+    color: #fff;
 }
 
 .map {
@@ -236,4 +238,54 @@ footer {
     .parking-grid {
         transform: scale(.95)
     }
+}
+
+/* --- HEATMAP + PREDICTOR --- */
+.chart-container {
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    background: rgba(8, 12, 20, .8);
+    /*
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 6px 24px rgba(2, 6, 23, .5);
+    border: 1px solid rgba(255, 255, 255, .03);
+}
+
+.chart-container h2 { 
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.predictor {
+    text-align: center;
+    margin-top: 30px;
+    padding: 15px; 
+}
+
+.predictor select,
+.predictor input,
+.predictor button {
+    margin: 6px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #333;
+    color: #fff;
+    font-size: 14px;
+    transition: 0.2s ease;
+}
+
+.predictor button:hover {
+    background: #444;
+    cursor: pointer;
+}
+
+#predictResult {
+    margin-top: 15px;
+    font-weight: 600;
+    color: #00ff9d;
 }

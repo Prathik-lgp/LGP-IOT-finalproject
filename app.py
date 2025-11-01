@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -15,7 +15,6 @@ def inject_env():
     )
 
 # ---------- SLOT CONFIG ----------
-# Add more slots here any time — automatically handled by logger + predictor
 slots = {
     "slot1": {"status": "empty"},
     "slot2": {"status": "empty"},
@@ -51,7 +50,8 @@ def log_exit(slot_id):
 # ---------- AI PREDICTION ENGINE ----------
 def load_logs():
     df = pd.read_csv(log_file)
-    if df.empty: return df
+    if df.empty:
+        return df
     df["time_entered"] = pd.to_datetime(df["time_entered"])
     df["hour"] = df["time_entered"].dt.hour
     df["weekday"] = df["time_entered"].dt.weekday  # 0 = Mon, 6 = Sun
@@ -73,15 +73,10 @@ def predict_occupancy():
 
         slot_data = slot_data.sort_values("time_entered")
         slot_data["duration_min"] = slot_data["duration_sec"] / 60
-
-        # Apply recency weight — newer entries count more
         slot_data["weight"] = np.linspace(0.5, 1.0, len(slot_data))
 
-        # Group by hour & weekend status
         is_weekend = now.weekday() >= 5
         group = slot_data[slot_data["is_weekend"] == is_weekend].groupby("hour")["duration_min"].mean()
-
-        # Predict occupancy % for each hour
         avg_dur = group.reindex(range(24), fill_value=0)
         norm = avg_dur / avg_dur.max() if avg_dur.max() > 0 else avg_dur
         preds[slot_id] = np.round(norm * 100, 1).tolist()
@@ -89,7 +84,7 @@ def predict_occupancy():
 
 # ---------- ROUTES ----------
 @app.route("/")
-def index():
+def parking_page():
     return render_template("parking.html")
 
 @app.route("/update_status", methods=["POST"])
@@ -111,8 +106,50 @@ def update_status():
 
     return jsonify({"ok": True})
 
+# ---------- HEATMAP PAGE ----------
 @app.route("/heatmap")
-def heatmap():
+def heatmap_page():
+    df = load_logs()
+    if df.empty:
+        heatmap_data = {}
+    else:
+        df["day"] = df["time_entered"].dt.day_name()
+        df["hour"] = df["time_entered"].dt.hour
+        pivot = df.pivot_table(index="day", columns="hour", values="duration_sec", aggfunc="mean").fillna(0)
+        heatmap_data = pivot.to_dict(orient="list")
+
+    return render_template("heatmap.html", heatmap_data=heatmap_data)
+
+# ---------- PREDICTOR PAGE ----------
+@app.route("/predictor", methods=["GET", "POST"])
+def predictor_page():
+    df = load_logs()
+    prediction = None
+    chosen_day = None
+    chosen_hour = None
+
+    if request.method == "POST" and not df.empty:
+        chosen_day = request.form.get("day")
+        chosen_hour = int(request.form.get("hour"))
+        df["day"] = df["time_entered"].dt.day_name()
+        df["hour"] = df["time_entered"].dt.hour
+
+        recency_weight = 0.7
+        recent_df = df.tail(200)
+
+        mean_recent = recent_df[(recent_df["day"] == chosen_day) & (recent_df["hour"] == chosen_hour)]["duration_sec"].mean()
+        mean_all = df[(df["day"] == chosen_day) & (df["hour"] == chosen_hour)]["duration_sec"].mean()
+
+        if pd.isna(mean_recent): mean_recent = 0
+        if pd.isna(mean_all): mean_all = 0
+
+        prediction = round((recency_weight * mean_recent + (1 - recency_weight) * mean_all) / 60, 2)
+
+    return render_template("predictor.html", prediction=prediction, day=chosen_day, hour=chosen_hour)
+
+# ---------- RAW JSON HEATMAP API (for JS) ----------
+@app.route("/heatmap_data")
+def heatmap_json():
     preds = predict_occupancy()
     return jsonify(preds)
 
