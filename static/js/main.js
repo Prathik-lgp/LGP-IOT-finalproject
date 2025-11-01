@@ -221,3 +221,21 @@ function restartPoller() { stopPoller(); startPoller(); }
 
 startPoller();
 window._parkingDashboard = { pollAll, startPoller, stopPoller, config };
+
+async function loadHeatmap() {
+    const res = await fetch('/heatmap');
+    const data = await res.json();
+    renderHeatmap(data);
+}
+
+function renderHeatmap(data) {
+    const ctx = document.getElementById('occupancyHeatmap').getContext('2d');
+    const labels = [...Array(24).keys()].map(h => `${h}:00`);
+    const datasets = Object.entries(data).map(([slot, values], i) => ({
+        label: slot,
+        data: values,
+        borderWidth: 1,
+        fill: true
+    }));
+
+
