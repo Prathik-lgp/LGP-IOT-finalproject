@@ -29,6 +29,49 @@ body {
     border: 1px solid rgba(255, 255, 255, .03)
 }
 
+/* --- NAVBAR --- */
+header.navbar {
+    background: rgba(8, 12, 20, 0.8);
+    border: 1px solid rgba(255, 255, 255, .03);
+    border-radius: 10px;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+}
+
+header.navbar h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e6eef6;
+    margin: 0;
+}
+
+header.navbar nav {
+    display: flex;
+    gap: 16px;
+}
+
+header.navbar a {
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+header.navbar a:hover {
+    color: #facc15;
+    transform: translateY(-1px);
+}
+
+header.navbar a.active {
+    color: #facc15;
+    font-weight: 600;
+}
+
+/* --- DASHBOARD HEADER --- */
 header {
     display: flex;
     align-items: center;
@@ -246,14 +289,13 @@ footer {
     max-width: 800px;
     margin: 20px auto;
     background: rgba(8, 12, 20, .8);
-    /*
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 6px 24px rgba(2, 6, 23, .5);
     border: 1px solid rgba(255, 255, 255, .03);
 }
 
-.chart-container h2 { 
+.chart-container h2 {
     text-align: center;
     color: var(--muted);
     margin-bottom: 12px;
@@ -263,7 +305,7 @@ footer {
 .predictor {
     text-align: center;
     margin-top: 30px;
-    padding: 15px; 
+    padding: 15px;
 }
 
 .predictor select,

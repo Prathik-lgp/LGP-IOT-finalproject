@@ -11,8 +11,12 @@
 <body>
     <div class="container" id="app">
         <header>
-            <h1>Parking Map Dashboard — PR10</h1>
+            <h1>Parking Map Dashboard</h1>
             <div class="controls">
+                <button class="btn" onclick="window.location.href='/parking'">Live Map</button>
+                <button class="btn" onclick="window.location.href='/heatmap'">Heatmap</button>
+                <button class="btn" onclick="window.location.href='/predictor'">Predictor</button>
+
                 <button class="btn" id="refreshBtn">Refresh now</button>
                 <label class="small">Poll interval:
                     <select id="intervalSelect" class="btn" style="padding:6px 10px">
