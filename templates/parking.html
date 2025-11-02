@@ -1,22 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Parking Map Dashboard — PR10</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <title>Parking Dashboard — PR10</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <div class="container" id="app">
-        <header>
-            <h1>Parking Map Dashboard</h1>
-            <div class="controls">
-                <button class="btn" onclick="window.location.href='/parking'">Live Map</button>
-                <button class="btn" onclick="window.location.href='/heatmap'">Heatmap</button>
-                <button class="btn" onclick="window.location.href='/predictor'">Predictor</button>
+    <div class="container">
 
+        <!-- LIVE PARKING DASHBOARD -->
+        <header>
+            <h1>🚗 Live Parking Dashboard — PR10</h1>
+            <div class="controls">
                 <button class="btn" id="refreshBtn">Refresh now</button>
                 <label class="small">Poll interval:
                     <select id="intervalSelect" class="btn" style="padding:6px 10px">
@@ -29,81 +27,141 @@
             </div>
         </header>
 
-        <div class="map">
+        <main class="map">
             <div class="left-col">
-                <div class="entry-exit" style="width:100%">
-                    <div class="spot" style="width:120px">
-                        <div class="spot-label">Exit</div>
-                        <div class="spot-value">←</div>
+                <div class="entry-exit">
+                    <div class="spot">
+                        <div class="spot-label">Entry Gate</div>
+                        <div class="spot-value">A1</div>
                     </div>
-                    <div style="flex:1"></div>
-                    <div class="spot" style="width:120px">
-                        <div class="spot-label">Entry</div>
-                        <div class="spot-value">→</div>
-                    </div>
-                </div>
-
-                <div class="map-area" aria-hidden="false">
-                    <div class="parking-grid" id="parkingGrid">
-                        <div class="lot" id="lot1" data-id="1">
-                            <div id="lot1-label">Lot 1</div>
-                            <div class="sub" id="lot1-sub">—</div>
-                        </div>
-                        <div class="lot" id="lot2" data-id="2">
-                            <div id="lot2-label">Lot 2</div>
-                            <div class="sub" id="lot2-sub">—</div>
-                        </div>
-                        <div class="lot" id="lot3" data-id="3">
-                            <div id="lot3-label">Lot 3</div>
-                            <div class="sub" id="lot3-sub">—</div>
-                        </div>
-                        <div class="lot nopark" id="nopark" data-id="X">
-                            <div id="nopark-label">No-Parking Zone</div>
-                            <div class="sub" id="nopark-sub">—</div>
-                        </div>
+                    <div class="spot">
+                        <div class="spot-label">Exit Gate</div>
+                        <div class="spot-value">B2</div>
                     </div>
                 </div>
 
+                <div class="map-area">
+                    <div class="parking-grid">
+                        <div class="lot" id="slot1">Slot 1<div class="sub">Empty</div>
+                        </div>
+                        <div class="lot" id="slot2">Slot 2<div class="sub">Empty</div>
+                        </div>
+                        <div class="lot" id="slot3">Slot 3<div class="sub">Empty</div>
+                        </div>
+                        <div class="lot nopark">No Parking<div class="sub">Restricted</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <aside class="side-info" style="width:320px">
+            <div class="side-info">
                 <div class="meta">
-                    <div><strong>Device UID:</strong> PR10</div>
-                    <div style="margin-top:8px"><strong>Last update:</strong> <span id="lastUpdate">Never</span></div>
+                    <div><strong>Device UID:</strong> {{ DEVICE_UID }}</div>
+                    <div><strong>IoT Endpoint:</strong> {{ IOT_BASE_URL }}</div>
                     <div class="status-row">
-                        <div class="dot" id="dotLed" style="background:#7c7c7c"></div>
-                        <div class="small">D1 LED state</div>
+                        <div class="dot free"></div> Free
+                        <div class="dot occ"></div> Occupied
                     </div>
                 </div>
+            </div>
+        </main>
 
-                <div class="meta" id="rawDataBox">
-                    <div style="font-weight:700; margin-bottom:6px">Raw sensor snapshot</div>
-                    <pre id="rawDump"
-                        style="white-space:pre-wrap; font-size:13px; margin:0; color:var(--muted)">No data yet</pre>
-                </div>
+        <footer><span>© 2025 PR10 Parking System</span></footer>
 
-                <div class="meta small">
-                    Logic: If ultrasound > 30 and IR == 1 → <strong>Free</strong> (green). Otherwise →
-                    <strong>Occupied</strong> (red).
-                    <br><br>
-                    No-parking violation: if ultrasound < 30 OR IR==0 → zone blinks red and D1 set to 1. </div>
-            </aside>
-        </div>
+        <!-- HEATMAP SECTION -->
+        <section class="chart-container">
+            <h2>📊 Parking Occupancy Heatmap</h2>
+            <canvas id="heatmapChart" width="800" height="400"></canvas>
+        </section>
 
-        <footer>
-            <div class="small">Built with tired sarcasm & functional JS.</div>
-            <div id="statusMsg" class="small">Status: idle</div>
-        </footer>
+        <!-- PREDICTOR SECTION -->
+        <section class="predictor chart-container">
+            <h2>🧠 Parking Predictor</h2>
+            <form method="POST" action="/predictor">
+                <label>Day:</label>
+                <select name="day">
+                    <option>Monday</option>
+                    <option>Tuesday</option>
+                    <option>Wednesday</option>
+                    <option>Thursday</option>
+                    <option>Friday</option>
+                    <option>Saturday</option>
+                    <option>Sunday</option>
+                </select>
+
+                <label>Hour:</label>
+                <input type="number" name="hour" min="0" max="23" value="12">
+                <button type="submit">Predict</button>
+            </form>
+
+            {% if prediction is not none %}
+            <div id="predictResult">
+                Predicted average stay at {{ hour }}:00 on {{ day }} = <strong>{{ prediction }} minutes</strong>
+            </div>
+            {% endif %}
+        </section>
     </div>
-    <!-- Inject env vars into JS -->
+
     <script>
-        const base = "{{ IOT_BASE_URL }}";
-        const uid = "{{ DEVICE_UID }}";
+        // --- LIVE UPDATE SCRIPT ---
+        async function fetchSlots() {
+            const res = await fetch("{{ IOT_BASE_URL }}=get_parking_status&uid={{ DEVICE_UID }}");
+            const data = await res.json();
+
+            for (const [slot, info] of Object.entries(data)) {
+                const el = document.getElementById(slot);
+                if (!el) continue;
+                el.classList.remove("free", "occupied", "blink");
+
+                if (info.status === "occupied") {
+                    el.classList.add("occupied");
+                    el.querySelector(".sub").innerText = "Occupied";
+                } else if (info.status === "nopark") {
+                    el.classList.add("nopark");
+                    el.querySelector(".sub").innerText = "No Parking";
+                } else {
+                    el.classList.add("free");
+                    el.querySelector(".sub").innerText = "Free";
+                }
+            }
+        }
+
+        let pollInterval = 5000;
+        document.getElementById("intervalSelect").addEventListener("change", e => {
+            pollInterval = parseInt(e.target.value);
+        });
+
+        document.getElementById("refreshBtn").addEventListener("click", fetchSlots);
+
+        setInterval(fetchSlots, pollInterval);
+        fetchSlots();
+
+        // --- HEATMAP CHART ---
+        fetch("/heatmap_data")
+            .then(res => res.json())
+            .then(heatmapData => {
+                const days = Object.keys(heatmapData);
+                const hours = Array.from({ length: 24 }, (_, i) => i + ":00");
+                const datasets = days.map((day, idx) => ({
+                    label: day,
+                    data: heatmapData[day] || Array(24).fill(0),
+                    borderWidth: 1,
+                    backgroundColor: `rgba(${(idx * 40) % 255}, ${(idx * 90) % 255}, 255, 0.4)`
+                }));
+
+                new Chart(document.getElementById("heatmapChart"), {
+                    type: "line",
+                    data: { labels: hours, datasets },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: "Avg Duration (s)" } },
+                            x: { title: { display: true, text: "Hour of Day" } }
+                        }
+                    }
+                });
+            });
     </script>
-
-    <!-- Include your modular JS -->
-
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
 </html>
