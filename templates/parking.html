@@ -1,20 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Parking Dashboard — PR10</title>
+
+    <!-- correct stylesheet path (must match static/css/style.css) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Chart.js for heatmap -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Inject env into window so JS can use it; falls back if env missing -->
+    <script>
+        window.IOT_BASE_URL = "{{ IOT_BASE_URL }}";
+        window.DEVICE_UID = "{{ DEVICE_UID }}";
+    </script>
 </head>
 
 <body>
     <div class="container">
 
-        <!-- LIVE PARKING DASHBOARD -->
-        <header>
-            <h1>🚗 Live Parking Dashboard — PR10</h1>
+        <!-- Header / Controls -->
+        <header class="navbar">
+            <h2 class="title">🚗 Smart Parking Dashboard — PR10</h2>
             <div class="controls">
                 <button class="btn" id="refreshBtn">Refresh now</button>
                 <label class="small">Poll interval:
@@ -28,59 +38,86 @@
             </div>
         </header>
 
-        <main class="map">
+        <!-- LIVE PARKING DASHBOARD -->
+        <div class="map" id="liveSection" aria-live="polite">
             <div class="left-col">
-                <div class="entry-exit">
-                    <div class="spot">
-                        <div class="spot-label">Entry Gate</div>
-                        <div class="spot-value">A1</div>
+                <div class="entry-exit" style="width:100%">
+                    <div class="spot" style="width:120px">
+                        <div class="spot-label">Exit</div>
+                        <div class="spot-value">←</div>
                     </div>
-                    <div class="spot">
-                        <div class="spot-label">Exit Gate</div>
-                        <div class="spot-value">B2</div>
+                    <div style="flex:1"></div>
+                    <div class="spot" style="width:120px">
+                        <div class="spot-label">Entry</div>
+                        <div class="spot-value">→</div>
                     </div>
                 </div>
 
-                <div class="map-area">
-                    <div class="parking-grid">
-                        <div class="lot" id="slot1">Slot 1<div class="sub">Empty</div>
+                <div class="map-area" aria-hidden="false">
+                    <div class="parking-grid" id="parkingGrid">
+                        <!-- IDs used by JS: slot1, slot2, slot3, nopark -->
+                        <div class="lot" id="slot1" data-id="slot1">
+                            <div id="slot1-label">Lot 1</div>
+                            <div class="sub" id="slot1-sub">—</div>
                         </div>
-                        <div class="lot" id="slot2">Slot 2<div class="sub">Empty</div>
+                        <div class="lot" id="slot2" data-id="slot2">
+                            <div id="slot2-label">Lot 2</div>
+                            <div class="sub" id="slot2-sub">—</div>
                         </div>
-                        <div class="lot" id="slot3">Slot 3<div class="sub">Empty</div>
+                        <div class="lot" id="slot3" data-id="slot3">
+                            <div id="slot3-label">Lot 3</div>
+                            <div class="sub" id="slot3-sub">—</div>
                         </div>
-                        <div class="lot nopark">No Parking<div class="sub">Restricted</div>
+                        <div class="lot nopark" id="nopark" data-id="nopark">
+                            <div id="nopark-label">No-Parking Zone</div>
+                            <div class="sub" id="nopark-sub">—</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="side-info">
+            <aside class="side-info" style="width:320px">
                 <div class="meta">
                     <div><strong>Device UID:</strong> {{ DEVICE_UID }}</div>
-                    <div><strong>IoT Endpoint:</strong> {{ IOT_BASE_URL }}</div>
+                    <div style="margin-top:8px"><strong>Last update:</strong> <span id="lastUpdate">Never</span></div>
                     <div class="status-row">
-                        <div class="dot free"></div> Free
-                        <div class="dot occ"></div> Occupied
+                        <div class="dot" id="dotLed" style="background:#7c7c7c"></div>
+                        <div class="small">D1 LED state</div>
                     </div>
                 </div>
-            </div>
-        </main>
 
-        <footer><span>© 2025 PR10 Parking System</span></footer>
+                <div class="meta" id="rawDataBox">
+                    <div style="font-weight:700; margin-bottom:6px">Raw sensor snapshot</div>
+                    <pre id="rawDump"
+                        style="white-space:pre-wrap; font-size:13px; margin:0; color:var(--muted)">No data yet</pre>
+                </div>
 
-        <!-- HEATMAP SECTION -->
-        <section class="chart-container">
-            <h2>📊 Parking Occupancy Heatmap</h2>
-            <canvas id="heatmapChart" width="800" height="400"></canvas>
+                <div class="meta small">
+                    Logic: If ultrasound > 30 and IR == 1 → <strong>Free</strong> (green). Otherwise →
+                    <strong>Occupied</strong> (red).
+                    <br><br>
+                    No-parking violation: if ultrasound < 30 OR IR==0 → zone blinks red and D1 set to 1. </div>
+            </aside>
+        </div>
+
+        <footer
+            style="margin-top:14px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
+            <div class="small">Built with tired sarcasm & functional JS.</div>
+            <div id="statusMsg" class="small">Status: idle</div>
+        </footer>
+
+        <!-- HEATMAP SECTION (below live map) -->
+        <section class="chart-container" aria-labelledby="heatmapTitle" id="heatmapSection">
+            <h2 id="heatmapTitle">📊 Occupancy Heatmap (predicted)</h2>
+            <canvas id="occupancyHeatmap" width="900" height="360"></canvas>
         </section>
 
         <!-- PREDICTOR SECTION -->
-        <section class="predictor chart-container">
-            <h2>🧠 Parking Predictor</h2>
-            <form method="POST" action="/predictor">
-                <label>Day:</label>
-                <select name="day">
+        <section class="chart-container predictor" id="predictorSection">
+            <h2>🧠 Occupancy Predictor</h2>
+            <div style="text-align:center; margin-top:10px;">
+                <label for="predictDay">Day:</label>
+                <select id="predictDay">
                     <option>Monday</option>
                     <option>Tuesday</option>
                     <option>Wednesday</option>
@@ -90,79 +127,19 @@
                     <option>Sunday</option>
                 </select>
 
-                <label>Hour:</label>
-                <input type="number" name="hour" min="0" max="23" value="12">
-                <button type="submit">Predict</button>
-            </form>
+                <label for="predictTime">Hour:</label>
+                <input id="predictTime" type="number" min="0" max="23" value="12" style="width:70px;">
 
-            {% if prediction is not none %}
-            <div id="predictResult">
-                Predicted average stay at {{ hour }}:00 on {{ day }} = <strong>{{ prediction }} minutes</strong>
+                <button id="predictBtn" class="btn">Estimate</button>
             </div>
-            {% endif %}
+
+            <div id="predictResult" style="text-align:center; margin-top:14px; font-weight:700;"></div>
         </section>
     </div>
 
-    <script>
-        // --- LIVE UPDATE SCRIPT ---
-        async function fetchSlots() {
-            const res = await fetch("{{ IOT_BASE_URL }}=get_parking_status&uid={{ DEVICE_UID }}");
-            const data = await res.json();
-
-            for (const [slot, info] of Object.entries(data)) {
-                const el = document.getElementById(slot);
-                if (!el) continue;
-                el.classList.remove("free", "occupied", "blink");
-
-                if (info.status === "occupied") {
-                    el.classList.add("occupied");
-                    el.querySelector(".sub").innerText = "Occupied";
-                } else if (info.status === "nopark") {
-                    el.classList.add("nopark");
-                    el.querySelector(".sub").innerText = "No Parking";
-                } else {
-                    el.classList.add("free");
-                    el.querySelector(".sub").innerText = "Free";
-                }
-            }
-        }
-
-        let pollInterval = 5000;
-        document.getElementById("intervalSelect").addEventListener("change", e => {
-            pollInterval = parseInt(e.target.value);
-        });
-
-        document.getElementById("refreshBtn").addEventListener("click", fetchSlots);
-
-        setInterval(fetchSlots, pollInterval);
-        fetchSlots();
-
-        // --- HEATMAP CHART ---
-        fetch("/heatmap_data")
-            .then(res => res.json())
-            .then(heatmapData => {
-                const days = Object.keys(heatmapData);
-                const hours = Array.from({ length: 24 }, (_, i) => i + ":00");
-                const datasets = days.map((day, idx) => ({
-                    label: day,
-                    data: heatmapData[day] || Array(24).fill(0),
-                    borderWidth: 1,
-                    backgroundColor: `rgba(${(idx * 40) % 255}, ${(idx * 90) % 255}, 255, 0.4)`
-                }));
-
-                new Chart(document.getElementById("heatmapChart"), {
-                    type: "line",
-                    data: { labels: hours, datasets },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true, title: { display: true, text: "Avg Duration (s)" } },
-                            x: { title: { display: true, text: "Hour of Day" } }
-                        }
-                    }
-                });
-            });
-    </script>
+    <!-- Chart.js already included in head -->
+    <!-- Your main JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
 </html>
