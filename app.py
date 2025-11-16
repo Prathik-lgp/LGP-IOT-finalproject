@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
 
@@ -22,65 +23,15 @@ slots = {
 }
 
 # ---------- DATA LOGGING ----------
-log_file = "parking_log.csv"
-
-def ensure_log_exists():
-    if not os.path.exists(log_file):
-        pd.DataFrame(columns=["slot_id", "time_entered", "time_left", "duration_sec"]).to_csv(log_file, index=False)
-ensure_log_exists()
-
-active_parking = {}
-
-def log_entry(slot_id):
-    active_parking[slot_id] = datetime.now()
-
-def log_exit(slot_id):
-    if slot_id in active_parking:
-        t_enter = active_parking.pop(slot_id)
-        t_exit = datetime.now()
-        duration = (t_exit - t_enter).total_seconds()
-        new_row = pd.DataFrame([{
-            "slot_id": slot_id,
-            "time_entered": t_enter,
-            "time_left": t_exit,
-            "duration_sec": duration
-        }])
-        new_row.to_csv(log_file, mode='a', header=False, index=False)
-
-# ---------- AI PREDICTION ENGINE ----------
-def load_logs():
-    df = pd.read_csv(log_file)
-    if df.empty:
-        return df
-    df["time_entered"] = pd.to_datetime(df["time_entered"])
-    df["hour"] = df["time_entered"].dt.hour
-    df["weekday"] = df["time_entered"].dt.weekday  # 0 = Mon, 6 = Sun
-    df["is_weekend"] = df["weekday"] >= 5
-    return df
-
-def predict_occupancy():
-    df = load_logs()
-    if df.empty:
-        return {slot: [0]*24 for slot in slots.keys()}
-
-    now = datetime.now()
-    preds = {}
-    for slot_id in slots.keys():
-        slot_data = df[df["slot_id"] == slot_id]
-        if slot_data.empty:
-            preds[slot_id] = [0]*24
-            continue
-
-        slot_data = slot_data.sort_values("time_entered")
-        slot_data["duration_min"] = slot_data["duration_sec"] / 60
-        slot_data["weight"] = np.linspace(0.5, 1.0, len(slot_data))
-
-        is_weekend = now.weekday() >= 5
-        group = slot_data[slot_data["is_weekend"] == is_weekend].groupby("hour")["duration_min"].mean()
-        avg_dur = group.reindex(range(24), fill_value=0)
-        norm = avg_dur / avg_dur.max() if avg_dur.max() > 0 else avg_dur
-        preds[slot_id] = np.round(norm * 100, 1).tolist()
-    return preds
+def get_history(field):
+    try:
+        url = f"https://iot.roboninja.in/index.php?action=read_history&UID=PR10&field={field}"
+        r = requests.get(url, timeout=5)
+        data = r.json()
+        return data.get("result", [])
+    except Exception as e:
+        print("History fetch error:", e)
+        return []
 
 # ---------- ROUTES ----------
 @app.route("/")
@@ -99,26 +50,49 @@ def update_status():
     prev_status = slots[slot_id]["status"]
     slots[slot_id]["status"] = status
 
-    if prev_status == "empty" and status == "occupied":
-        log_entry(slot_id)
-    elif prev_status == "occupied" and status == "empty":
-        log_exit(slot_id)
-
     return jsonify({"ok": True})
 
-# ---------- HEATMAP PAGE ----------
-@app.route("/heatmap")
-def heatmap_page():
-    df = load_logs()
-    if df.empty:
-        heatmap_data = {}
-    else:
-        df["day"] = df["time_entered"].dt.day_name()
-        df["hour"] = df["time_entered"].dt.hour
-        pivot = df.pivot_table(index="day", columns="hour", values="duration_sec", aggfunc="mean").fillna(0)
-        heatmap_data = pivot.to_dict(orient="list")
+@app.route("/predictor-data")
+def predictor_data():
+    return jsonify({
+        "Distance1": get_history("Distance1"),
+        "Distance2": get_history("Distance2"),
+        "Distance3": get_history("Distance3"),
+        "DistanceX1": get_history("DistanceX1")
+    })
 
-    return render_template("heatmap.html", heatmap_data=heatmap_data)
+@app.route("/heatmap-data")
+def heatmap_data():
+    history = {
+        "Distance1": get_history("Distance1"),
+        "Distance2": get_history("Distance2"),
+        "Distance3": get_history("Distance3"),
+        "DistanceX1": get_history("DistanceX1")
+    }
+    return jsonify(history)
+
+
+# ---------- HEATMAP PAGE ----------
+def build_heatmap():
+    fields = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
+    heatmap = {}
+
+    for field in fields:
+        data = get_history(field)   # <--- Using your IoT API
+        points = []
+        for row in data:
+            try:
+                t = datetime.fromtimestamp(int(row["timestamp"]))
+                points.append({
+                    "value": float(row["value"]),
+                    "hour": t.hour,
+                    "weekday": t.weekday()
+                })
+            except:
+                pass
+        heatmap[field] = points
+    return heatmap
+
 
 # ---------- PREDICTOR PAGE ----------
 @app.route("/predictor", methods=["GET", "POST"])
@@ -150,8 +124,7 @@ def predictor_page():
 # ---------- RAW JSON HEATMAP API (for JS) ----------
 @app.route("/heatmap_data")
 def heatmap_json():
-    preds = predict_occupancy()
-    return jsonify(preds)
+    return jsonify(build_heatmap())
 
 # ---------- MAIN ----------
 if __name__ == "__main__":
