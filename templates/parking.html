@@ -19,6 +19,14 @@
     </script>
 </head>
 
+
+<script>
+    // call the heatmap loader AFTER the page + ChartJS is ready
+    document.addEventListener("DOMContentLoaded", () => {
+        loadHeatmapChart();
+    });
+</script>
+
 <body>
     <div class="container">
 
