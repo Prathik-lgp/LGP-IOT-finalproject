@@ -63,14 +63,14 @@ def predictor_data():
 
 @app.route("/heatmap_data")
 def heatmap_data():
-    history = {
-        "Distance1": get_history("Distance1"),
-        "Distance2": get_history("Distance2"),
-        "Distance3": get_history("Distance3"),
-        "DistanceX1": get_history("DistanceX1")
-    }
-    return jsonify(history)
+    slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
 
+    data = {}
+    for slot in slots:
+        # TEMP FIX → generate 24 dummy occupancy values (0–100)
+        data[slot] = np.random.randint(0, 100, 24).tolist()
+
+    return jsonify(data)
 
 # ---------- HEATMAP PAGE ----------
 def build_heatmap():
