@@ -61,7 +61,7 @@ def predictor_data():
         "DistanceX1": get_history("DistanceX1")
     })
 
-@app.route("/heatmap-data")
+@app.route("/heatmap_data")
 def heatmap_data():
     history = {
         "Distance1": get_history("Distance1"),
