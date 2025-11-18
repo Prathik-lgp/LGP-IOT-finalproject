@@ -63,14 +63,50 @@ def predictor_data():
 
 @app.route("/heatmap_data")
 def heatmap_data():
+    UID = "PR10"
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
 
-    data = {}
-    for slot in slots:
-        # TEMP FIX → generate 24 dummy occupancy values (0–100)
-        data[slot] = np.random.randint(0, 100, 24).tolist()
+    final_data = {}
 
-    return jsonify(data)
+    for slot in slots:
+        url = f"https://iot.roboninja.in/index.php?action=read_history&UID={UID}&field={slot}"
+
+        try:
+            r = requests.get(url, timeout=5)
+            history = r.json()    # list of {"value": "...", "timestamp": "..."}
+        except:
+            # If API fails → return empty 24hrs
+            final_data[slot] = [0]*24
+            continue
+
+        # Create empty counters for each hour
+        hour_counts = [0]*24
+        hour_total = [0]*24
+
+        OCC_THRESHOLD = 30  # cm distance → slot occupied
+
+        for entry in history:
+            try:
+                dist = float(entry["value"])
+                ts = datetime.strptime(entry["timestamp"], "%Y-%m-%d %H:%M:%S")
+                hr = ts.hour
+
+                hour_total[hr] += 1
+                if dist < OCC_THRESHOLD:
+                    hour_counts[hr] += 1
+            except:
+                continue
+
+        # Convert to % occupancy per hour
+        hourly_percent = [
+            int((hour_counts[h] / hour_total[h]) * 100) if hour_total[h] > 0 else 0
+            for h in range(24)
+        ]
+
+        final_data[slot] = hourly_percent
+
+    return jsonify(final_data)
+
 
 # ---------- HEATMAP PAGE ----------
 def build_heatmap():

@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Parking Dashboard — PR10</title>
+    <title>ParqSpace</title>
 
     <!-- correct stylesheet path (must match static/css/style.css) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -32,7 +32,7 @@
 
         <!-- Header / Controls -->
         <header class="navbar">
-            <h2 class="title">🚗 Smart Parking Dashboard — PR10</h2>
+            <h2 class="title">🚗 ParqSpace</h2>
             <div class="controls">
                 <button class="btn" id="refreshBtn">Refresh now</button>
                 <label class="small">Poll interval:
@@ -116,7 +116,7 @@
 
         <!-- HEATMAP SECTION (below live map) -->
         <section class="chart-container" aria-labelledby="heatmapTitle" id="heatmapSection">
-            <h2 id="heatmapTitle">📊 Occupancy Heatmap (predicted)</h2>
+            <h2 id="heatmapTitle">📊 Occupancy chart</h2>
             <canvas id="occupancyHeatmap" width="900" height="360"></canvas>
         </section>
 
