@@ -63,49 +63,45 @@ def predictor_data():
 
 @app.route("/heatmap_data")
 def heatmap_data():
-    UID = "PR10"
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
-
-    final_data = {}
+    result = {}
 
     for slot in slots:
-        url = f"https://iot.roboninja.in/index.php?action=read_history&UID={UID}&field={slot}"
-
+        url = f"https://iot.roboninja.in/index.php?action=read_history&UID=PR10&field={slot}"
         try:
             r = requests.get(url, timeout=5)
-            history = r.json()    # list of {"value": "...", "timestamp": "..."}
+            records = r.json()
         except:
-            # If API fails → return empty 24hrs
-            final_data[slot] = [0]*24
+            result[slot] = [0] * 24
             continue
 
-        # Create empty counters for each hour
-        hour_counts = [0]*24
-        hour_total = [0]*24
+        hourly_buckets = {h: [] for h in range(24)}
 
-        OCC_THRESHOLD = 30  # cm distance → slot occupied
+        for row in records:
+            ts = row.get("Timestamp")
+            value = row.get("Value")
 
-        for entry in history:
             try:
-                dist = float(entry["value"])
-                ts = datetime.strptime(entry["timestamp"], "%Y-%m-%d %H:%M:%S")
-                hr = ts.hour
-
-                hour_total[hr] += 1
-                if dist < OCC_THRESHOLD:
-                    hour_counts[hr] += 1
+                dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                hour = dt.hour
+                val = float(value)
+                hourly_buckets[hour].append(val)
             except:
-                continue
+                pass
 
-        # Convert to % occupancy per hour
-        hourly_percent = [
-            int((hour_counts[h] / hour_total[h]) * 100) if hour_total[h] > 0 else 0
-            for h in range(24)
-        ]
+        # build final 24-hour vector
+        hourly_avg = []
+        for h in range(24):
+            vals = hourly_buckets[h]
+            if len(vals) == 0:
+                hourly_avg.append(0)          # no data → 0
+            else:
+                hourly_avg.append(sum(vals) / len(vals))
 
-        final_data[slot] = hourly_percent
+        result[slot] = hourly_avg
 
-    return jsonify(final_data)
+    return jsonify(result)
+
 
 # Debug code
 @app.route("/test_api")
