@@ -102,19 +102,6 @@ def heatmap_data():
 
     return jsonify(result)
 
-
-# Debug code
-@app.route("/test_api")
-def test_api():
-    import requests
-    try:
-        url = "https://iot.roboninja.in/index.php?action=read_history&UID=PR10&field=Distance2"
-        r = requests.get(url, timeout=5)
-        return r.text
-    except Exception as e:
-        return str(e)
-
-
 # ---------- HEATMAP PAGE ----------
 def build_heatmap():
     fields = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
