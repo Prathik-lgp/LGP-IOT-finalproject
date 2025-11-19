@@ -258,26 +258,32 @@
     function bindPredictor() {
         const btn = document.getElementById('predictBtn');
         const out = document.getElementById('predictResult');
-        const dayEl = document.getElementById('predictDay');
-        const hourEl = document.getElementById('predictTime');
 
         btn?.addEventListener('click', async (e) => {
             e.preventDefault();
-            const day = dayEl.value;
-            const hour = Number(hourEl.value);
-            // simple client-side predictor using heatmap_data averages
+
+            const slot = document.getElementById("predictSlot").value;
+            const hour = document.getElementById("predictTime").value;
+            const weekday = document.getElementById("predictDay").value;
+
             try {
-                const res = await fetch('/heatmap_data');
-                const json = await res.json();
-                const slots = Object.keys(json);
-                if (!slots.length) { out.textContent = 'No historical data yet'; return; }
-                const avg = slots.reduce((acc, s) => acc + (json[s][hour] || 0), 0) / slots.length;
-                out.textContent = `Expected occupancy at ${hour}:00 on ${day} — ${avg.toFixed(1)}%`;
-            } catch (err) {
-                out.textContent = 'Prediction failed';
+                const res = await fetch('/predictor', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `slot=${slot}&hour=${hour}&weekday=${weekday}`
+                });
+
+                const html = await res.text();
+
+                // extract prediction text
+                const match = html.match(/<span id="predictionValue">(.*)<\/span>/);
+                out.textContent = match ? match[1] : "Prediction failed";
+            } catch {
+                out.textContent = "Prediction failed";
             }
         });
     }
+
 
     // ---------------- init ----------------
     function init() {

@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import requests
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 app = Flask(__name__)
 
@@ -22,15 +24,13 @@ slots = {
     "slot3": {"status": "empty"},
 }
 
-# ---------- DATA LOGGING ----------
-def get_history(field):
+# ---------- DATA LOGGING ---------- 
+def get_history(slot):
+    url = f"https://iot.roboninja.in/index.php?action=read_history&UID=PR10&field={slot}" 
     try:
-        url = f"https://iot.roboninja.in/index.php?action=read_history&UID=PR10&field={field}"
         r = requests.get(url, timeout=5)
-        data = r.json()
-        return data.get("result", [])
-    except Exception as e:
-        print("History fetch error:", e)
+        return r.json()
+    except:
         return []
 
 # ---------- ROUTES ----------
@@ -53,7 +53,7 @@ def update_status():
     return jsonify({"ok": True})
 
 @app.route("/predictor-data")
-def predictor_data():
+def predictor_json():
     return jsonify({
         "Distance1": get_history("Distance1"),
         "Distance2": get_history("Distance2"),
@@ -61,7 +61,6 @@ def predictor_data():
         "DistanceX1": get_history("DistanceX1")
     })
 
-@app.route("/heatmap_data")
 def heatmap_data():
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
     result = {}
@@ -123,33 +122,90 @@ def build_heatmap():
         heatmap[field] = points
     return heatmap
 
+def build_ml_dataset():
+    slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
+    rows = []
+
+    for slot in slots:
+        data = get_history(slot)
+
+        for entry in data:
+            ts = entry.get("Timestamp")
+            val = entry.get("Value")
+
+            try:
+                dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                dist = float(val)
+
+                rows.append({
+                    "slot": slot,
+                    "hour": dt.hour,
+                    "weekday": dt.weekday(),
+                    "value": dist,
+                    "occupied": 1 if dist < 20 else 0    # tune this threshold later
+                })
+            except:
+                pass
+
+    if len(rows) == 0:
+        return pd.DataFrame()
+
+    return pd.DataFrame(rows)
+
+def train_predictor_model():
+    df = build_ml_dataset()
+    if df.empty:
+        return None
+
+    # One-hot encode the slot name
+    df_encoded = pd.get_dummies(df, columns=["slot"])
+
+    X = df_encoded.drop("occupied", axis=1)
+    y = df_encoded["occupied"]
+
+    model = RandomForestClassifier(n_estimators=80)
+    model.fit(X, y)
+
+    return model, df_encoded
+
+def predict_future(slot, hour, weekday, guess_distance=15):
+    model_data = train_predictor_model()
+    if model_data is None:
+        return "Not enough training data"
+
+    model, df_encoded = model_data
+
+    # Build an input row with all dummy columns = 0 except selected one
+    input_row = {
+        "hour": hour,
+        "weekday": weekday,
+        "value": guess_distance,
+    }
+
+    for c in df_encoded.columns:
+        if c.startswith("slot_"):
+            input_row[c] = 1 if c == f"slot_{slot}" else 0
+
+    X_new = pd.DataFrame([input_row])
+
+    prob = model.predict_proba(X_new)[0][1]
+    return round(prob * 100, 1)
 
 # ---------- PREDICTOR PAGE ----------
 @app.route("/predictor", methods=["GET", "POST"])
 def predictor_page():
-    df = load_logs()
     prediction = None
-    chosen_day = None
-    chosen_hour = None
+    fields = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
 
-    if request.method == "POST" and not df.empty:
-        chosen_day = request.form.get("day")
-        chosen_hour = int(request.form.get("hour"))
-        df["day"] = df["time_entered"].dt.day_name()
-        df["hour"] = df["time_entered"].dt.hour
+    if request.method == "POST":
+        slot = request.form.get("slot")
+        hour = int(request.form.get("hour"))
+        weekday = int(request.form.get("weekday"))
 
-        recency_weight = 0.7
-        recent_df = df.tail(200)
+        prediction = predict_future(slot, hour, weekday)
 
-        mean_recent = recent_df[(recent_df["day"] == chosen_day) & (recent_df["hour"] == chosen_hour)]["duration_sec"].mean()
-        mean_all = df[(df["day"] == chosen_day) & (df["hour"] == chosen_hour)]["duration_sec"].mean()
+    return jsonify({"prediction": prediction})
 
-        if pd.isna(mean_recent): mean_recent = 0
-        if pd.isna(mean_all): mean_all = 0
-
-        prediction = round((recency_weight * mean_recent + (1 - recency_weight) * mean_all) / 60, 2)
-
-    return render_template("predictor.html", prediction=prediction, day=chosen_day, hour=chosen_hour)
 
 # ---------- RAW JSON HEATMAP API (for JS) ----------
 @app.route("/heatmap_data")
