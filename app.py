@@ -61,6 +61,7 @@ def predictor_json():
         "DistanceX1": get_history("DistanceX1")
     })
 
+@app.route("/heatmap_data")
 def heatmap_data():
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
     result = {}
