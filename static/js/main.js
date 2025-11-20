@@ -254,7 +254,7 @@
         }
     }
 
-    // ---------------- Predictor UI (local, simple) ----------------
+    // ---------------- Predictor UI (ML API version) ----------------
     function bindPredictor() {
         const btn = document.getElementById('predictBtn');
         const out = document.getElementById('predictResult');
@@ -263,26 +263,42 @@
             e.preventDefault();
 
             const slot = document.getElementById("predictSlot").value;
-            const hour = document.getElementById("predictTime").value;
-            const weekday = document.getElementById("predictDay").value;
+            const hour = Number(document.getElementById("predictTime").value);
+            const dayName = document.getElementById("predictDay").value;
+
+            // convert weekday name → index
+            const weekdayMap = {
+                "Monday": 0,
+                "Tuesday": 1,
+                "Wednesday": 2,
+                "Thursday": 3,
+                "Friday": 4,
+                "Saturday": 5,
+                "Sunday": 6
+            };
+            const weekday = weekdayMap[dayName];
 
             try {
                 const res = await fetch('/predictor', {
                     method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: `slot=${slot}&hour=${hour}&weekday=${weekday}`
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ slot, hour, weekday })
                 });
 
-                const html = await res.text();
+                const data = await res.json();
 
-                // extract prediction text
-                const match = html.match(/<span id="predictionValue">(.*)<\/span>/);
-                out.textContent = match ? match[1] : "Prediction failed";
-            } catch {
+                if (data.prediction !== undefined) {
+                    out.textContent = `Predicted occupancy: ${data.prediction}%`;
+                } else {
+                    out.textContent = "Prediction failed (no data)";
+                }
+
+            } catch (err) {
                 out.textContent = "Prediction failed";
             }
         });
     }
+
 
 
     // ---------------- init ----------------
