@@ -193,17 +193,15 @@ def predict_future(slot, hour, weekday, guess_distance=15):
     return round(prob * 100, 1)
 
 # ---------- PREDICTOR PAGE ----------
-@app.route("/predictor", methods=["GET", "POST"])
+@app.route("/predictor", methods=["POST"])
 def predictor_page():
-    prediction = None
-    fields = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
+    data = request.get_json()  # <<< this is REQUIRED for your JS
 
-    if request.method == "POST":
-        slot = request.form.get("slot")
-        hour = int(request.form.get("hour"))
-        weekday = int(request.form.get("weekday"))
+    slot = data.get("slot")
+    hour = int(data.get("hour"))
+    weekday = int(data.get("weekday"))
 
-        prediction = predict_future(slot, hour, weekday)
+    prediction = predict_future(slot, hour, weekday)
 
     return jsonify({"prediction": prediction})
 
