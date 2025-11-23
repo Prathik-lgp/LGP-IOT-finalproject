@@ -64,7 +64,7 @@ def predictor_json():
 @app.route("/heatmap_data")
 def heatmap_data():
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
-    OCC_THRESHOLD = 100   # adjust if needed (cm)
+    OCC_THRESHOLD = 30
     
     result = {}
 
@@ -112,7 +112,7 @@ def build_heatmap():
     heatmap = {}
 
     for field in fields:
-        data = get_history(field)   # <--- Using your IoT API
+        data = get_history(field)
         points = []
         for row in data:
             try:
@@ -147,7 +147,7 @@ def build_ml_dataset():
                     "hour": dt.hour,
                     "weekday": dt.weekday(),
                     "value": dist,
-                    "occupied": 1 if dist < 20 else 0    # tune this threshold later
+                    "occupied": 1 if dist < 30 else 0
                 })
             except:
                 pass
@@ -162,7 +162,6 @@ def train_predictor_model():
     if df.empty:
         return None
 
-    # One-hot encode the slot name
     df_encoded = pd.get_dummies(df, columns=["slot"])
 
     X = df_encoded.drop("occupied", axis=1)
@@ -180,7 +179,6 @@ def predict_future(slot, hour, weekday, guess_distance=15):
 
     model, df_encoded = model_data
 
-    # Build an input row with all dummy columns = 0 except selected one
     input_row = {
         "hour": hour,
         "weekday": weekday,
@@ -199,7 +197,7 @@ def predict_future(slot, hour, weekday, guess_distance=15):
 # ---------- PREDICTOR PAGE ----------
 @app.route("/predictor", methods=["POST"])
 def predictor_page():
-    data = request.get_json()  # <<< this is REQUIRED for your JS
+    data = request.get_json()
 
     slot = data.get("slot")
     hour = int(data.get("hour"))
