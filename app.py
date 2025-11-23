@@ -64,6 +64,8 @@ def predictor_json():
 @app.route("/heatmap_data")
 def heatmap_data():
     slots = ["Distance1", "Distance2", "Distance3", "DistanceX1"]
+    OCC_THRESHOLD = 100   # adjust if needed (cm)
+    
     result = {}
 
     for slot in slots:
@@ -89,18 +91,20 @@ def heatmap_data():
             except:
                 pass
 
-        # build final 24-hour vector
-        hourly_avg = []
+        hourly_occ = []
         for h in range(24):
             vals = hourly_buckets[h]
             if len(vals) == 0:
-                hourly_avg.append(0)          # no data → 0
+                hourly_occ.append(0)                 # no data → 0%
             else:
-                hourly_avg.append(sum(vals) / len(vals))
+                occ_count = sum(1 for v in vals if v < OCC_THRESHOLD)
+                percentage = (occ_count / len(vals)) * 100
+                hourly_occ.append(round(percentage, 1))
 
-        result[slot] = hourly_avg
+        result[slot] = hourly_occ
 
     return jsonify(result)
+
 
 # ---------- HEATMAP PAGE ----------
 def build_heatmap():
