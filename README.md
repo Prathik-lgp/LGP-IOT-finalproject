@@ -24,8 +24,5 @@ Set threshold for ultrasonic sensor manually
 ## **Link to my dashboard**
 *https://parqspace.onrender.com/*
 
-## **Link to thunkable app**
-*https://x.thunkable.com/copy/88a9c3acf2dce8a706db76cecab26b3d*
-
 ## **Link to video expaination of web dashboard**
 *https://www.canva.com/design/DAG5gHksr_w/vqsRjYZQ0yLiN34shroP6A/watch?utm_content=DAG5gHksr_w&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h2222db4115*
