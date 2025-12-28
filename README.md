@@ -24,7 +24,7 @@ python app.py
 4. Open browser
 http://127.0.0.1:5000/
 
-## Deployment (Render)
+**Deployment (Render)**
 1. Create a new Web Service
 2. Connect GitHub repository
 3. Add Python build
@@ -32,7 +32,7 @@ http://127.0.0.1:5000/
     BASE_URL
     UID
 
-## Set Start Command:
+**Set Start Command:**
 gunicorn app:app
 
 ## **Notes**
