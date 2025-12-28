@@ -10,9 +10,30 @@ IoT API for distance readings
 Readings taken from wemos mini r2 d1 which updates parking status in a web dashboard. Also checks for no parking zone violation and sends alert accordingly. Hardware used other than the wifi module: IR sensor and Ultrasound sensor. RandomForest ML model predicts future slot status based on time and past patterns. Uses render to host the web dashboard.
 
 ## **Instructions to use**
-Clone the repo. Create a virtual environment and activate it. Install dependencies like requirements.txt. Setup up a .env file to store api keys like base url and username.
-IOT_BASE_URL=https://iot.roboninja.in/index.php?action
-DEVICE_UID=______________________
+
+1. Clone repo
+git clone <repo-url>
+cd project-folder
+
+2. Install dependencies
+pip install -r requirements.txt
+
+3. Run Flask server
+python app.py
+
+4. Open browser
+http://127.0.0.1:5000/
+
+## Deployment (Render)
+1. Create a new Web Service
+2. Connect GitHub repository
+3. Add Python build
+4. Add environment variables:
+    BASE_URL
+    UID
+
+## Set Start Command:
+gunicorn app:app
 
 ## **Notes**
 Prediction may vary due a small dataset taken using roboninja iot API
